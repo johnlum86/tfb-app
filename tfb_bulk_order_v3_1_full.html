@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>TFB Bulk Order Command Centre v3.1</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <link rel="apple-touch-icon" href="tfb-icon.png" />
+  <link rel="icon" href="tfb-icon.png" />
+
+  <style>
+    :root {
+      --primary: #007bff;
+      --primary-dark: #0056b3;
+      --accent: #ff9900;
+      --bg: #f7f7f7;
+      --card-bg: #ffffff;
+      --border: #d0d7e2;
+    }
+    * { box-sizing: border-box; }
+    body { font-family: Arial; padding: 20px; background: var(--bg); }
+    .wrapper { max-width: 820px; margin: 0 auto; }
+    h1 { font-size: 1.4rem; margin-bottom: 12px; color: #222; }
+    .card { background: var(--card-bg); border-radius: 12px; padding: 16px; box-shadow: 0 2px 6px rgba(0,0,0,0.06); border: 1px solid var(--border); }
+    label { display:block; margin-top:10px; font-size:0.9rem; font-weight:600; }
+    input, select, textarea { width:100%; padding:10px; margin-top:4px; border-radius:6px; border:1px solid #ccc; font-size:0.95rem; }
+    textarea { min-height:70px; resize:vertical; }
+    button, .btn { display:inline-block; padding:10px 14px; font-size:0.95rem; border-radius:6px; border:none; color:#fff; background:var(--primary); cursor:pointer; }
+    .btn-primary:hover { background: var(--primary-dark); }
+    .btn-accent { background: var(--accent); }
+    .btn-ghost { background:#e5ebf5; color:#222; }
+    .btn-sm { padding:6px 10px; font-size:0.8rem; }
+    #output, #batchOutput { background:#fff; padding:10px; border-radius:8px; white-space:pre-wrap; border:1px solid #eee; margin-top:10px; }
+    .tabs { display:flex; gap:6px; margin-bottom:10px; flex-wrap:wrap; }
+    .tab-btn { flex:1; min-width:120px; background:#e5ebf5; border:none; border-radius:20px; padding:8px; }
+    .tab-btn.active { background:var(--primary); color:#fff; }
+    .tab-content { display:none; }
+    .tab-content.active { display:block; }
+    table { width:100%; border-collapse:collapse; margin-top:10px; font-size:0.85rem; }
+    th, td { border:1px solid #e0e5f0; padding:6px; }
+    th { background:#f0f4fb; }
+    #printCard { padding:10px; border-radius:8px; border:1px dashed #cbd3e3; background:#fdfdff; margin-top:10px; }
+    #qrImage { max-width:200px; margin-top:10px; }
+  </style>
+</head>
+
+<body>
+<div class="wrapper">
+<h1>TFB Bulk Order Command Centre v3.1</h1>
+<div class="card">
+
+<div class="tabs">
+  <button class="tab-btn active" data-tab="single">Single Reminder</button>
+  <button class="tab-btn" data-tab="batch">Batch Mode</button>
+  <button class="tab-btn" data-tab="qrpdf">QR & PDF</button>
+  <button class="tab-btn" data-tab="outlets">Preset Outlets</button>
+</div>
+
+<!-- SINGLE TAB -->
+<div id="tab-single" class="tab-content active">
+  <label>Date</label><input type="date" id="date">
+  <label>Event</label><input type="text" id="event">
+  <label>Pax</label><input type="number" id="pax">
+  <label>Outlet</label><select id="outlet"></select>
+  <label>Notes</label><textarea id="notes"></textarea>
+
+  <button onclick="generateSingle()">Generate Reminder</button>
+  <div id="output"></div>
+  <button onclick="copySingle()">Copy Message</button>
+  <button onclick="openWA()">Open WhatsApp</button>
+  <button onclick="iosCal()">📲 iPhone Calendar</button>
+  <a id="androidBtn" target="_blank"><button>🤖 Android Calendar</button></a>
+</div>
+
+<!-- BATCH TAB -->
+<div id="tab-batch" class="tab-content">
+  <label>Date</label><input type="date" id="batchDate">
+  <label>Event</label><input type="text" id="batchEvent">
+  <table>
+  <thead><tr><th>Outlet</th><th>Pax</th><th>Notes</th><th></th></tr></thead>
+  <tbody id="batchBody"></tbody>
+  </table>
+  <button onclick="addBatchRow()">Add Row</button>
+  <button onclick="generateBatch()">Generate Batch</button>
+  <div id="batchOutput"></div>
+  <button onclick="copyBatch()">Copy Batch</button>
+</div>
+
+<!-- QR TAB -->
+<div id="tab-qrpdf" class="tab-content">
+  <button onclick="generateQR()">Generate QR</button>
+  <img id="qrImage">
+  <button onclick="window.print()">Print / Save PDF</button>
+</div>
+
+<!-- OUTLETS TAB -->
+<div id="tab-outlets" class="tab-content">
+  <label>Add Outlet</label>
+  <input type="text" id="newOutlet">
+  <button onclick="addOutlet()">Add</button>
+  <ul id="outletList"></ul>
+</div>
+
+</div>
+</div>
+
+<script>
+// Tab logic
+document.querySelectorAll('.tab-btn').forEach(btn=>{
+  btn.onclick=()=>{
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+    document.getElementById('tab-'+btn.dataset.tab).classList.add('active');
+  };
+});
+
+let outlets=["Bandar Sunway","Mid Valley","1 Utama","KLCC","IOI Puchong"];
+let lastMsg="", lastICS=null;
+
+// Render outlets
+function renderOutlets(){
+  let sel=document.getElementById('outlet');
+  sel.innerHTML="";
+  outlets.forEach(o=> sel.innerHTML+=`<option>${o}</option>`);
+  let list=document.getElementById('outletList');
+  list.innerHTML="";
+  outlets.forEach((o,i)=> list.innerHTML+=`<li>${o} <button onclick="removeOutlet(${i})">x</button></li>`);
+}
+renderOutlets();
+
+function addOutlet(){
+  let v=document.getElementById('newOutlet').value.trim();
+  if(!v) return;
+  outlets.push(v); renderOutlets();
+}
+
+function removeOutlet(i){
+  outlets.splice(i,1); renderOutlets();
+}
+
+function addBatchRow(){
+  document.getElementById('batchBody').insertAdjacentHTML("beforeend",
+  `<tr>
+    <td><select class='bo'>${outlets.map(o=>`<option>${o}</option>`).join("")}</select></td>
+    <td><input class='bp' type='number'></td>
+    <td><input class='bn'></td>
+    <td><button onclick="this.parentNode.parentNode.remove()">x</button></td>
+  </tr>`);
+}
+
+function generateSingle(){
+  let d=date.value, e=event.value, p=pax.value, o=outlet.value, n=notes.value;
+  if(!d||!e) return alert("Fill date & event");
+  lastMsg=
+`🚨 BULK ORDER REMINDER 🚨
+
+📅 Date: ${d}
+🎉 Event: ${e}
+👥 Pax: ${p}
+🏪 Outlet: ${o}
+📝 Notes: ${n}
+
+Add to Calendar:
+iPhone: .ics button
+Android: Google Calendar button`;
+  output.textContent=lastMsg;
+  let dt=new Date(d);
+  let y=dt.getFullYear(), m=("0"+(dt.getMonth()+1)).slice(-2), dd=("0"+dt.getDate()).slice(-2);
+  let start=`${y}${m}${dd}T090000`, end=`${y}${m}${dd}T100000`;
+  androidBtn.href=`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(e+" Bulk Order")}&dates=${start}/${end}`;
+  let ics=`BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VEVENT
+SUMMARY:${e} Bulk Order
+DTSTART:${start}
+END:VEVENT
+END:VCALENDAR`;
+  lastICS=URL.createObjectURL(new Blob([ics],{type:"text/calendar"}));
+}
+
+function copySingle(){ navigator.clipboard.writeText(lastMsg); alert("Copied!"); }
+function openWA(){ window.open("https://wa.me/?text="+encodeURIComponent(lastMsg),"_blank"); }
+function iosCal(){ if(lastICS) window.location.href=lastICS; }
+
+function generateBatch(){
+  let d=batchDate.value, e=batchEvent.value, out="";
+  document.querySelectorAll('#batchBody tr').forEach((r,i)=>{
+    let o=r.querySelector('.bo').value;
+    let p=r.querySelector('.bp').value;
+    let n=r.querySelector('.bn').value;
+    out+=`[${i+1}] ${o}
+Pax:${p}
+Notes:${n}
+
+`;
+  });
+  batchOutput.textContent=out;
+}
+function copyBatch(){ navigator.clipboard.writeText(batchOutput.textContent); alert("Copied!"); }
+
+function generateQR(){
+  if(!lastMsg) return alert("Generate first");
+  qrImage.src="https://chart.googleapis.com/chart?cht=qr&chs=300x300&chl="+encodeURIComponent(lastMsg);
+}
+</script>
+
+</body>
+</html>
