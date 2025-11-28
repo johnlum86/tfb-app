@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>TFB Bulk Order Command Centre v4.1 (GitHub ICS)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 16px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+      background: #f4f5fb;
+      color: #111827;
+    }
+    .wrapper { max-width: 880px; margin: 0 auto; }
+    h1 { margin: 0 0 4px 0; font-size: 1.35rem; }
+    .subtitle { font-size: 0.86rem; color: #4b5563; margin-bottom: 12px; }
+    .card {
+      background: #ffffff;
+      border-radius: 14px;
+      padding: 14px;
+      border: 1px solid #e5e7eb;
+      box-shadow: 0 12px 30px rgba(15,23,42,0.14);
+    }
+    label {
+      display:block;
+      margin-top:10px;
+      font-size:0.8rem;
+      font-weight:600;
+    }
+    input, textarea {
+      width:100%;
+      padding:9px;
+      margin-top:4px;
+      border-radius:8px;
+      border:1px solid #d1d5db;
+      font-size:0.9rem;
+    }
+    textarea { min-height:70px; resize:vertical; }
+    .row { display:flex; flex-wrap:wrap; gap:8px; }
+    .col-6 { flex:1 1 calc(50% - 8px); }
+    @media(max-width:640px){ .col-6{flex:1 1 100%;} }
+    .btn {
+      border-radius:999px;
+      border:none;
+      padding:9px 12px;
+      font-size:0.85rem;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap:6px;
+      cursor:pointer;
+      font-weight:500;
+    }
+    .btn-primary {
+      background:linear-gradient(135deg,#2563eb,#1d4ed8);
+      color:#fff;
+      box-shadow:0 8px 18px rgba(37,99,235,0.35);
+      width:100%;
+      margin-top:12px;
+    }
+    .btn-ghost {
+      background:transparent;
+      border:1px solid #d1d5db;
+      color:#111827;
+    }
+    .btn-sm { padding:7px 10px; font-size:0.75rem; }
+    .btn:disabled {
+      opacity:0.5;
+      cursor:not-allowed;
+      box-shadow:none;
+    }
+    #output {
+      margin-top:8px;
+      padding:10px;
+      border-radius:10px;
+      border:1px dashed #d1d5db;
+      background:#f9fafb;
+      white-space:pre-wrap;
+      font-size:0.85rem;
+      min-height:40px;
+    }
+    .section-title {
+      margin-top:16px;
+      font-size:0.95rem;
+      font-weight:600;
+    }
+    .small-note {
+      font-size:0.75rem;
+      color:#6b7280;
+      margin-top:4px;
+    }
+    .config-box {
+      margin-top:16px;
+      padding:10px;
+      border-radius:10px;
+      border:1px solid #e5e7eb;
+      background:#f9fafb;
+      font-size:0.8rem;
+    }
+    .pill {
+      display:inline-flex;
+      align-items:center;
+      gap:4px;
+      padding:3px 8px;
+      border-radius:999px;
+      background:#e5ebf5;
+      font-size:0.7rem;
+      color:#4b5563;
+      margin-bottom:8px;
+    }
+    #statusBox {
+      margin-top:8px;
+      padding:8px;
+      border-radius:8px;
+      font-size:0.78rem;
+      background:#eef2ff;
+      color:#3730a3;
+      border:1px solid #c7d2fe;
+      white-space:pre-wrap;
+    }
+    #statusBox.error {
+      background:#fef2f2;
+      color:#b91c1c;
+      border-color:#fecaca;
+    }
+    #statusBox.success {
+      background:#ecfdf3;
+      color:#166534;
+      border-color:#bbf7d0;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <h1>TFB Bulk Order Command Centre v4.1</h1>
+    <div class="subtitle">
+      HQ generates → GitHub hosts ICS → WhatsApp sends → Manager taps link to save in calendar.
+    </div>
+
+    <div class="card">
+      <div class="pill">Mode: HQ Generator • Storage: GitHub ICS (no database)</div>
+
+      <!-- Bulk order form -->
+      <label for="dateInput">Date</label>
+      <input type="date" id="dateInput" />
+
+      <div class="row">
+        <div class="col-6">
+          <label for="timeInput">Time</label>
+          <input type="time" id="timeInput" placeholder="09:00" />
+        </div>
+        <div class="col-6">
+          <label for="eventInput">Event</label>
+          <input type="text" id="eventInput" placeholder="e.g., Corporate Catering" />
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col-6">
+          <label for="paxInput">Pax</label>
+          <input type="number" id="paxInput" placeholder="e.g., 120" />
+        </div>
+        <div class="col-6">
+          <label for="outletInput">Outlet</label>
+          <input type="text" id="outletInput" placeholder="e.g., Bandar Sunway" />
+        </div>
+      </div>
+
+      <label for="notesInput">Notes</label>
+      <textarea id="notesInput" placeholder="Sauce separate, extra salmon, delivery by 11am, etc."></textarea>
+
+      <button class="btn btn-primary" type="button" id="btnGenerate">
+        🚀 Generate & Upload ICS to GitHub
+      </button>
+
+      <div class="section-title">WhatsApp Message</div>
+      <div id="output">(Your message will appear here)</div>
+
+      <div class="row" style="margin-top:8px;">
+        <div class="col-6">
+          <button class="btn btn-ghost btn-sm" type="button" id="btnCopy" disabled>
+            📋 Copy Message
+          </button>
+          <div class="small-note">Copy if WhatsApp deep link is blocked.</div>
+        </div>
+        <div class="col-6">
+          <button class="btn btn-ghost btn-sm" type="button" id="btnWA" disabled>
+            🟢 Open in WhatsApp
+          </button>
+          <div class="small-note">Message will be pre-filled. Choose outlet manager chat.</div>
+        </div>
+      </div>
+
+      <div class="section-title">Calendar Link</div>
+      <button class="btn btn-ghost btn-sm" type="button" id="btnCalendar" disabled>
+        📌 Open Calendar Link
+      </button>
+      <div class="small-note">
+        For iPhone & Android: tap this link from the WhatsApp message or here for testing.
+      </div>
+
+      <!-- GitHub config -->
+      <div class="config-box">
+        <strong>GitHub Settings (stored only in this browser)</strong><br />
+        <span class="small-note">
+          Used to upload ICS files into your repo. Token stays on this device.
+        </span>
+
+        <label for="ghOwner">GitHub Username / Owner</label>
+        <input id="ghOwner" placeholder="e.g., johnlum86" />
+
+        <label for="ghRepo">Repository Name</label>
+        <input id="ghRepo" placeholder="e.g., tfb-bulk-order" />
+
+        <label for="ghBranch">Branch</label>
+        <input id="ghBranch" placeholder="main" />
+
+        <label for="ghFolder">ICS Folder (relative)</label>
+        <input id="ghFolder" placeholder="ics" />
+
+        <label for="ghBaseUrl">Public Base URL (optional)</label>
+        <input id="ghBaseUrl" placeholder="https://johnlum86.github.io/tfb-bulk-order" />
+
+        <label for="ghToken">GitHub Fine-grained Personal Access Token</label>
+        <input id="ghToken" placeholder="github_pat_..." />
+
+        <div id="statusBox">
+          Waiting for configuration…
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ---------- State ----------
+    let lastMessage = "";
+    let lastCalendarUrl = "";
+    let lastMeta = null;
+
+    // ---------- Helpers ----------
+    function pad2(n) {
+      return n.toString().padStart(2, "0");
+    }
+
+    function setStatus(msg, type) {
+      const box = document.getElementById("statusBox");
+      box.textContent = msg;
+      box.classList.remove("error", "success");
+      if (type === "error") box.classList.add("error");
+      if (type === "success") box.classList.add("success");
+    }
+
+    function cleanText(str) {
+      if (!str) return "";
+      return String(str)
+        .replace(/[\u200B-\u200D\uFEFF]/g, "") // zero-width
+        .replace(/\s+/g, " ")
+        .trim();
+    }
+
+    function cleanPathSegment(str) {
+      if (!str) return "";
+      return String(str)
+        .replace(/[\u200B-\u200D\uFEFF]/g, "")
+        .replace(/\\/g, "/")
+        .trim()
+        .replace(/^\/+|\/+$/g, ""); // trim leading/trailing slashes
+    }
+
+    function validateGitHubConfig(showMessages = true) {
+      const ownerRaw = document.getElementById("ghOwner").value;
+      const repoRaw = document.getElementById("ghRepo").value;
+      const branchRaw = document.getElementById("ghBranch").value || "main";
+      const folderRaw = document.getElementById("ghFolder").value || "ics";
+      const baseUrlRaw = document.getElementById("ghBaseUrl").value;
+      const tokenRaw = document.getElementById("ghToken").value;
+
+      const owner = cleanText(ownerRaw);
+      const repo = cleanText(repoRaw);
+      const branch = cleanText(branchRaw) || "main";
+      const folder = cleanPathSegment(folderRaw) || "ics";
+      const baseUrl = cleanText(baseUrlRaw);
+      const token = cleanText(tokenRaw);
+
+      // Persist
+      localStorage.setItem("tfb_gh_owner", owner);
+      localStorage.setItem("tfb_gh_repo", repo);
+      localStorage.setItem("tfb_gh_branch", branch);
+      localStorage.setItem("tfb_gh_folder", folder);
+      localStorage.setItem("tfb_gh_baseurl", baseUrl);
+      localStorage.setItem("tfb_gh_token", token);
+
+      let errors = [];
+
+      if (!owner) errors.push("• Missing GitHub owner / username");
+      if (!repo) errors.push("• Missing repository name");
+      if (!token || token.length < 30 || !token.startsWith("gh")) {
+        errors.push("• GitHub token looks invalid (should start with 'gh' and be long)");
+      }
+
+      if (errors.length) {
+        if (showMessages) {
+          setStatus(
+            "GitHub config not ready:\n" + errors.join("\n"),
+            "error"
+          );
+        }
+        return null;
+      }
+
+      const cfg = { owner, repo, branch, folder, baseUrl, token };
+      if (showMessages) {
+        setStatus(
+          "GitHub config OK.\nOwner: " + owner +
+          "\nRepo: " + repo +
+          "\nBranch: " + branch +
+          "\nFolder: " + folder +
+          (baseUrl ? ("\nBase URL: " + baseUrl) : "\nBase URL: auto"),
+          "success"
+        );
+      }
+      return cfg;
+    }
+
+    function buildICS(meta) {
+      const d = new Date(meta.date);
+      const y = d.getFullYear();
+      const m = pad2(d.getMonth() + 1);
+      const day = pad2(d.getDate());
+
+      let hh = "09";
+      let mm = "00";
+      if (meta.time && meta.time.includes(":")) {
+        const parts = meta.time.split(":");
+        hh = pad2(parts[0]);
+        mm = pad2(parts[1]);
+      }
+      const start = `${y}${m}${day}T${hh}${mm}00`;
+      const endHour = String((parseInt(hh, 10) + 1) % 24).padStart(2, "0");
+      const end = `${y}${m}${day}T${endHour}${mm}00`;
+
+      const desc =
+        `Pax: ${meta.pax || "-"}\\n` +
+        `Outlet: ${meta.outlet}\\n` +
+        `Notes: ${meta.notes || "-"}`;
+
+      return (
+        "BEGIN:VCALENDAR\n" +
+        "VERSION:2.0\n" +
+        "BEGIN:VEVENT\n" +
+        "SUMMARY:" + meta.event + " Bulk Order\n" +
+        "DTSTART:" + start + "\n" +
+        "DTEND:" + end + "\n" +
+        "DESCRIPTION:" + desc + "\n" +
+        "LOCATION:" + meta.outlet + "\n" +
+        "END:VEVENT\n" +
+        "END:VCALENDAR"
+      );
+    }
+
+    function toBase64(str) {
+      // handle UTF-8 safely
+      return btoa(unescape(encodeURIComponent(str)));
+    }
+
+    async function uploadICSFileToGitHub(icsContent, filename) {
+      const cfg = validateGitHubConfig(true);
+      if (!cfg) {
+        throw new Error("GitHub config invalid. Fix settings at bottom.");
+      }
+
+      const pathSegment = cfg.folder ? `${cfg.folder}/${filename}` : filename;
+      const apiUrl = `https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents/${encodeURIComponent(pathSegment).replace(/%2F/g,"/")}`;
+
+      const body = {
+        message: `Add bulk order ICS ${filename}`,
+        content: toBase64(icsContent),
+        branch: cfg.branch
+      };
+
+      setStatus("Uploading ICS to GitHub…", "success");
+
+      const res = await fetch(apiUrl, {
+        method: "PUT",
+        headers: {
+          "Authorization": `Bearer ${cfg.token}`,
+          "Accept": "application/vnd.github+json"
+        },
+        body: JSON.stringify(body)
+      });
+
+      if (!res.ok) {
+        const text = await res.text();
+        console.error("GitHub upload error:", text);
+        throw new Error("GitHub upload failed: " + res.status + " " + res.statusText);
+      }
+
+      // Determine public URL
+      let base = cfg.baseUrl;
+      if (!base) {
+        base = `https://${cfg.owner}.github.io/${cfg.repo}`;
+      }
+      base = base.replace(/\/+$/,""); // trim trailing slash
+      const publicUrl = `${base}/${pathSegment}`;
+      setStatus("ICS uploaded. Public URL ready.", "success");
+      return publicUrl;
+    }
+
+    // ---------- Main Generate ----------
+    async function generate() {
+      const dateVal = (document.getElementById("dateInput").value || "").trim();
+      const timeVal = (document.getElementById("timeInput").value || "").trim();
+      const eventVal = (document.getElementById("eventInput").value || "").trim();
+      const paxVal = (document.getElementById("paxInput").value || "").trim();
+      const outletVal = (document.getElementById("outletInput").value || "").trim();
+      const notesVal = (document.getElementById("notesInput").value || "").trim();
+
+      if (!dateVal) {
+        alert("Please select a Date");
+        document.getElementById("dateInput").focus();
+        return;
+      }
+      if (!eventVal) {
+        alert("Please fill in Event");
+        document.getElementById("eventInput").focus();
+        return;
+      }
+      if (!outletVal) {
+        alert("Please fill in Outlet");
+        document.getElementById("outletInput").focus();
+        return;
+      }
+
+      const meta = {
+        date: dateVal,
+        time: timeVal,
+        event: eventVal,
+        pax: paxVal,
+        outlet: outletVal,
+        notes: notesVal
+      };
+      lastMeta = meta;
+
+      // Build ICS content
+      const ics = buildICS(meta);
+
+      // Build safe filename
+      const safeOutlet = (meta.outlet || "")
+        .replace(/\s+/g, "_")
+        .replace(/[^A-Za-z0-9_-]/g, "");
+      const filename = `bulkorder_${meta.date}_${safeOutlet || "outlet"}.ics`;
+
+      let icsUrl = "";
+      try {
+        icsUrl = await uploadICSFileToGitHub(ics, filename);
+      } catch (err) {
+        console.error(err);
+        setStatus(String(err.message || err), "error");
+        alert("ICS upload failed. Check GitHub settings (token, repo, folder, permissions).");
+        icsUrl = "";
+      }
+
+      // WhatsApp message template (urgent TFB style)
+      lastMessage =
+        "‼️ IMPORTANT BULK ORDER ‼️\n\n" +
+        "Please take note of the following order.\n" +
+        "This MUST be added into your calendar immediately.\n\n" +
+        "📅 Date: " + meta.date + (meta.time ? (" " + meta.time) : "") + "\n" +
+        "🕒 Time: " + (meta.time || "-") + "\n" +
+        "🎉 Event: " + meta.event + "\n" +
+        "👥 Pax: " + (meta.pax || "-") + "\n" +
+        "🏪 Outlet: " + meta.outlet + "\n" +
+        "📝 Notes: " + (meta.notes || "-") + "\n\n" +
+        "📌 ADD TO CALENDAR (MANDATORY):\n" +
+        (icsUrl ? ("Tap here → " + icsUrl + "\n\n") : "(Calendar link unavailable)\n\n") +
+        "After saving, please reply “OK” to confirm.\n" +
+        "Thank you.";
+
+      document.getElementById("output").textContent = lastMessage;
+
+      lastCalendarUrl = icsUrl || "";
+
+      // Enable buttons
+      document.getElementById("btnCopy").disabled = false;
+      document.getElementById("btnWA").disabled = false;
+      document.getElementById("btnCalendar").disabled = !lastCalendarUrl;
+    }
+
+    function openWhatsApp() {
+      if (!lastMessage) {
+        alert("Generate a reminder first");
+        return;
+      }
+      const url = "whatsapp://send?text=" + encodeURIComponent(lastMessage);
+      window.location.href = url;
+    }
+
+    function openCalendarLink() {
+      if (!lastCalendarUrl) {
+        alert("No calendar link available. Generate again after GitHub upload succeeds.");
+        return;
+      }
+      window.open(lastCalendarUrl, "_blank");
+    }
+
+    function copyMessage() {
+      if (!lastMessage) {
+        alert("Generate a reminder first");
+        return;
+      }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(lastMessage)
+          .then(() => alert("Message copied!"))
+          .catch(() => alert("Clipboard blocked. Copy manually from the box."));
+      } else {
+        alert("Clipboard not supported. Copy manually from the box.");
+      }
+    }
+
+    // ---------- Init ----------
+    window.addEventListener("DOMContentLoaded", () => {
+      // restore GitHub settings
+      const o = localStorage.getItem("tfb_gh_owner") || "";
+      const r = localStorage.getItem("tfb_gh_repo") || "";
+      const b = localStorage.getItem("tfb_gh_branch") || "main";
+      const f = localStorage.getItem("tfb_gh_folder") || "ics";
+      const u = localStorage.getItem("tfb_gh_baseurl") || "";
+      const t = localStorage.getItem("tfb_gh_token") || "";
+
+      if (o) document.getElementById("ghOwner").value = o;
+      if (r) document.getElementById("ghRepo").value = r;
+      if (b) document.getElementById("ghBranch").value = b;
+      if (f) document.getElementById("ghFolder").value = f;
+      if (u) document.getElementById("ghBaseUrl").value = u;
+      if (t) document.getElementById("ghToken").value = t;
+
+      validateGitHubConfig(false);
+
+      document.getElementById("btnGenerate").addEventListener("click", () => {
+        generate();
+      });
+      document.getElementById("btnWA").addEventListener("click", openWhatsApp);
+      document.getElementById("btnCalendar").addEventListener("click", openCalendarLink);
+      document.getElementById("btnCopy").addEventListener("click", copyMessage);
+
+      // Re-validate config whenever user edits fields
+      ["ghOwner","ghRepo","ghBranch","ghFolder","ghBaseUrl","ghToken"].forEach(id => {
+        const el = document.getElementById(id);
+        el.addEventListener("change", () => validateGitHubConfig(true));
+        el.addEventListener("blur", () => validateGitHubConfig(true));
+      });
+    });
+  </script>
+</body>
+</html>
