@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>TFB Bulk Order Command Centre v3.7</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- Supabase JS v2 -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 16px;
+      font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;
+      background: #f4f5fb;
+      color: #111827;
+    }
+    .wrapper { max-width: 860px; margin: 0 auto; }
+    h1 { margin: 0 0 4px 0; font-size: 1.3rem; }
+    .subtitle { font-size: 0.85rem; color: #4b5563; margin-bottom: 12px; }
+    .card {
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 14px;
+      border: 1px solid #e5e7eb;
+      box-shadow: 0 10px 26px rgba(15,23,42,0.12);
+    }
+    label {
+      display:block;
+      margin-top:10px;
+      font-size:0.8rem;
+      font-weight:600;
+    }
+    input, textarea {
+      width:100%;
+      padding:9px;
+      margin-top:4px;
+      border-radius:8px;
+      border:1px solid #d1d5db;
+      font-size:0.9rem;
+    }
+    textarea { min-height:70px; resize:vertical; }
+    .row { display:flex; flex-wrap:wrap; gap:8px; }
+    .col-6 { flex:1 1 calc(50% - 8px); }
+    @media(max-width:640px){ .col-6{flex:1 1 100%;} }
+    .btn {
+      border-radius:999px;
+      border:none;
+      padding:9px 12px;
+      font-size:0.85rem;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap:6px;
+      cursor:pointer;
+      font-weight:500;
+    }
+    .btn-primary {
+      background:linear-gradient(135deg,#2563eb,#1d4ed8);
+      color:#fff;
+      box-shadow:0 8px 18px rgba(37,99,235,0.35);
+      width:100%;
+      margin-top:12px;
+    }
+    .btn-ghost {
+      background:transparent;
+      border:1px solid #d1d5db;
+      color:#111827;
+    }
+    .btn-sm { padding:7px 10px; font-size:0.75rem; }
+    .btn:disabled {
+      opacity:0.5;
+      cursor:not-allowed;
+      box-shadow:none;
+    }
+    #output {
+      margin-top:8px;
+      padding:10px;
+      border-radius:10px;
+      border:1px dashed #d1d5db;
+      background:#f9fafb;
+      white-space:pre-wrap;
+      font-size:0.85rem;
+      min-height:40px;
+    }
+    .section-title {
+      margin-top:16px;
+      font-size:0.95rem;
+      font-weight:600;
+    }
+    .small-note {
+      font-size:0.75rem;
+      color:#6b7280;
+      margin-top:4px;
+    }
+    .supabase-box {
+      margin-top:16px;
+      padding:10px;
+      border-radius:10px;
+      border:1px solid #e5e7eb;
+      background:#f9fafb;
+      font-size:0.8rem;
+    }
+    .pill {
+      display:inline-flex;
+      align-items:center;
+      gap:4px;
+      padding:3px 8px;
+      border-radius:999px;
+      background:#e5ebf5;
+      font-size:0.7rem;
+      color:#4b5563;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <h1>TFB Bulk Order Command Centre v3.7</h1>
+    <div class="subtitle">
+      HQ generates → Supabase saves → WhatsApp sends → Manager taps link to save in calendar.
+    </div>
+
+    <div class="card">
+      <div class="pill">Mode: HQ Generator</div>
+
+      <label for="dateInput">Date</label>
+      <input type="date" id="dateInput" />
+
+      <div class="row">
+        <div class="col-6">
+          <label for="timeInput">Time</label>
+          <input type="time" id="timeInput" placeholder="09:00" />
+        </div>
+        <div class="col-6">
+          <label for="eventInput">Event</label>
+          <input type="text" id="eventInput" placeholder="e.g., Corporate Catering" />
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col-6">
+          <label for="paxInput">Pax</label>
+          <input type="number" id="paxInput" placeholder="e.g., 120" />
+        </div>
+        <div class="col-6">
+          <label for="outletInput">Outlet</label>
+          <input type="text" id="outletInput" placeholder="e.g., Bandar Sunway" />
+        </div>
+      </div>
+
+      <label for="notesInput">Notes</label>
+      <textarea id="notesInput" placeholder="Sauce separate, extra salmon, delivery by 11am, etc."></textarea>
+
+      <button class="btn btn-primary" type="button" id="btnGenerate">
+        🚀 Generate & Save
+      </button>
+
+      <div class="section-title">WhatsApp Message</div>
+      <div id="output">(Your message will appear here)</div>
+
+      <div class="row" style="margin-top:8px;">
+        <div class="col-6">
+          <button class="btn btn-ghost btn-sm" type="button" id="btnCopy" disabled>
+            📋 Copy Message
+          </button>
+          <div class="small-note">Copy if WhatsApp deep link is blocked.</div>
+        </div>
+        <div class="col-6">
+          <button class="btn btn-ghost btn-sm" type="button" id="btnWA" disabled>
+            🟢 Open in WhatsApp
+          </button>
+          <div class="small-note">Message will be pre-filled. Choose outlet manager chat.</div>
+        </div>
+      </div>
+
+      <div class="section-title">Calendar Link</div>
+      <button class="btn btn-ghost btn-sm" type="button" id="btnCalendar" disabled>
+        📌 Open Calendar Link
+      </button>
+      <div class="small-note">
+        For iPhone & Android: tap this link from the WhatsApp message or here for testing.
+      </div>
+
+      <div class="supabase-box">
+        <strong>Supabase Settings</strong><br />
+        <span class="small-note">
+          These stay only on this device (localStorage). If left empty, ICS hosting + DB save will be skipped.
+        </span>
+        <label for="sbUrl">Supabase Project URL</label>
+        <input id="sbUrl" placeholder="https://YOUR_PROJECT.supabase.co" />
+        <label for="sbKey">Supabase anon public API key</label>
+        <input id="sbKey" placeholder="YOUR_ANON_KEY_HERE" />
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ---------- State ----------
+    let supabaseClient = null;
+    let lastMessage = "";
+    let lastCalendarUrl = "";
+    let lastMeta = null;
+
+    // ---------- Helpers ----------
+    function pad2(n) {
+      return n.toString().padStart(2, "0");
+    }
+
+    function initSupabase() {
+      const url = (document.getElementById("sbUrl").value || "").trim();
+      const key = (document.getElementById("sbKey").value || "").trim();
+
+      // persist locally
+      localStorage.setItem("tfb_sb_url", url);
+      localStorage.setItem("tfb_sb_key", key);
+
+      if (!url || !key || url.includes("YOUR_PROJECT") || key.includes("YOUR_ANON")) {
+        console.warn("Supabase not configured.");
+        supabaseClient = null;
+        return false;
+      }
+
+      supabaseClient = window.supabase.createClient(url, key);
+      return true;
+    }
+
+    function buildICS(meta) {
+      const d = new Date(meta.date);
+      const y = d.getFullYear();
+      const m = pad2(d.getMonth() + 1);
+      const day = pad2(d.getDate());
+
+      let hh = "09";
+      let mm = "00";
+      if (meta.time && meta.time.includes(":")) {
+        const parts = meta.time.split(":");
+        hh = pad2(parts[0]);
+        mm = pad2(parts[1]);
+      }
+      const start = `${y}${m}${day}T${hh}${mm}00`;
+      const endHour = String((parseInt(hh, 10) + 1) % 24).padStart(2, "0");
+      const end = `${y}${m}${day}T${endHour}${mm}00`;
+
+      const desc =
+        `Pax: ${meta.pax || "-"}\\n` +
+        `Outlet: ${meta.outlet}\\n` +
+        `Notes: ${meta.notes || "-"}`;
+
+      return (
+        "BEGIN:VCALENDAR\n" +
+        "VERSION:2.0\n" +
+        "BEGIN:VEVENT\n" +
+        "SUMMARY:" + meta.event + " Bulk Order\n" +
+        "DTSTART:" + start + "\n" +
+        "DTEND:" + end + "\n" +
+        "DESCRIPTION:" + desc + "\n" +
+        "LOCATION:" + meta.outlet + "\n" +
+        "END:VEVENT\n" +
+        "END:VCALENDAR"
+      );
+    }
+
+    async function uploadICSFile(icsContent, filename) {
+      if (!supabaseClient && !initSupabase()) {
+        return null;
+      }
+
+      const blob = new Blob([icsContent], { type: "text/calendar" });
+
+      const { data, error } = await supabaseClient
+        .storage
+        .from("tfb-ics")
+        .upload(filename, blob, {
+          contentType: "text/calendar",
+          upsert: true
+        });
+
+      if (error) {
+        console.error("ICS upload failed:", error);
+        return null;
+      }
+
+      const { data: publicData } = supabaseClient
+        .storage
+        .from("tfb-ics")
+        .getPublicUrl(filename);
+
+      return publicData.publicUrl;
+    }
+
+    async function saveSupabase(meta) {
+      if (!supabaseClient && !initSupabase()) {
+        return;
+      }
+      try {
+        const { error } = await supabaseClient
+          .from("bulk_orders")
+          .insert([{
+            date: meta.date,
+            time: meta.time,
+            event: meta.event,
+            pax: meta.pax ? parseInt(meta.pax, 10) || null : null,
+            outlet: meta.outlet,
+            notes: meta.notes || "",
+            created_at: new Date().toISOString()
+          }]);
+        if (error) {
+          console.warn("Supabase DB insert failed:", error);
+        } else {
+          console.log("Supabase DB insert OK");
+        }
+      } catch (e) {
+        console.warn("Supabase DB error:", e);
+      }
+    }
+
+    // ---------- Main Generate ----------
+    async function generate() {
+      const dateVal = (document.getElementById("dateInput").value || "").trim();
+      const timeVal = (document.getElementById("timeInput").value || "").trim();
+      const eventVal = (document.getElementById("eventInput").value || "").trim();
+      const paxVal = (document.getElementById("paxInput").value || "").trim();
+      const outletVal = (document.getElementById("outletInput").value || "").trim();
+      const notesVal = (document.getElementById("notesInput").value || "").trim();
+
+      if (!dateVal) {
+        alert("Please select a Date");
+        document.getElementById("dateInput").focus();
+        return;
+      }
+      if (!eventVal) {
+        alert("Please fill in Event");
+        document.getElementById("eventInput").focus();
+        return;
+      }
+      if (!outletVal) {
+        alert("Please fill in Outlet");
+        document.getElementById("outletInput").focus();
+        return;
+      }
+
+      const meta = {
+        date: dateVal,
+        time: timeVal,
+        event: eventVal,
+        pax: paxVal,
+        outlet: outletVal,
+        notes: notesVal
+      };
+      lastMeta = meta;
+
+      // Build ICS content
+      const ics = buildICS(meta);
+
+      // Upload ICS to Supabase Storage (if configured)
+      let icsUrl = null;
+      if (initSupabase()) {
+        const safeOutlet = (meta.outlet || "").replace(/\s+/g, "_").replace(/[^A-Za-z0-9_]/g, "");
+        const filename = `bulkorder_${meta.date}_${safeOutlet || "outlet"}.ics`;
+        icsUrl = await uploadICSFile(ics, filename);
+      }
+
+      if (!icsUrl) {
+        alert("ICS hosting not available (Supabase not configured or upload failed). Message will be generated without calendar link.");
+      }
+
+      // WhatsApp message template (your custom approved version)
+      lastMessage =
+        "‼️ IMPORTANT BULK ORDER ‼️\n\n" +
+        "Please take note of the following order.\n" +
+        "This MUST be added into your calendar immediately.\n\n" +
+        "📅 Date: " + meta.date + (meta.time ? (" " + meta.time) : "") + "\n" +
+        "🕒 Time: " + (meta.time || "-") + "\n" +
+        "🎉 Event: " + meta.event + "\n" +
+        "👥 Pax: " + (meta.pax || "-") + "\n" +
+        "🏪 Outlet: " + meta.outlet + "\n" +
+        "📝 Notes: " + (meta.notes || "-") + "\n\n" +
+        "📌 ADD TO CALENDAR (MANDATORY):\n" +
+        (icsUrl ? ("Tap here → " + icsUrl + "\n\n") : "(Calendar link unavailable)\n\n") +
+        "After saving, please reply “OK” to confirm.\n" +
+        "Thank you.";
+
+      document.getElementById("output").textContent = lastMessage;
+
+      lastCalendarUrl = icsUrl || "";
+
+      // Enable buttons
+      document.getElementById("btnCopy").disabled = false;
+      document.getElementById("btnWA").disabled = false;
+      document.getElementById("btnCalendar").disabled = !lastCalendarUrl;
+
+      // Save to DB (if Supabase configured)
+      if (supabaseClient) {
+        saveSupabase(meta);
+      }
+    }
+
+    function openWhatsApp() {
+      if (!lastMessage) {
+        alert("Generate a reminder first");
+        return;
+      }
+      const url = "whatsapp://send?text=" + encodeURIComponent(lastMessage);
+      window.location.href = url;
+    }
+
+    function openCalendarLink() {
+      if (!lastCalendarUrl) {
+        alert("No calendar link available. Check Supabase configuration and generate again.");
+        return;
+      }
+      window.open(lastCalendarUrl, "_blank");
+    }
+
+    function copyMessage() {
+      if (!lastMessage) {
+        alert("Generate a reminder first");
+        return;
+      }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(lastMessage)
+          .then(() => alert("Message copied!"))
+          .catch(() => alert("Clipboard blocked. Copy manually from the box."));
+      } else {
+        alert("Clipboard not supported. Copy manually from the box.");
+      }
+    }
+
+    // ---------- Init ----------
+    window.addEventListener("DOMContentLoaded", () => {
+      // restore supabase settings
+      const u = localStorage.getItem("tfb_sb_url") || "";
+      const k = localStorage.getItem("tfb_sb_key") || "";
+      if (u) document.getElementById("sbUrl").value = u;
+      if (k) document.getElementById("sbKey").value = k;
+
+      document.getElementById("btnGenerate").addEventListener("click", () => {
+        generate();
+      });
+      document.getElementById("btnWA").addEventListener("click", openWhatsApp);
+      document.getElementById("btnCalendar").addEventListener("click", openCalendarLink);
+      document.getElementById("btnCopy").addEventListener("click", copyMessage);
+    });
+  </script>
+</body>
+</html>
